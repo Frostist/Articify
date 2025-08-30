@@ -13,7 +13,11 @@ state([
     'category_id' => '',
     'showForm' => false,
     'missedDate' => '',
-    'showCategorySetup' => false,
+    'showOnboardingModal' => false,
+    'onboardingStep' => 1,
+    'onboardingCategories' => [],
+    'newCategoryName' => '',
+    'newCategoryColor' => '#3B82F6',
 ]);
 
 rules([
@@ -107,6 +111,11 @@ $contributionData = computed(function() use ($getContributionColor) {
     return $data;
 });
 
+$needsOnboarding = computed(function() {
+    $user = auth()->user();
+    return $user && !$user->has_completed_onboarding;
+});
+
 $save = function() {
     $this->validate();
     
@@ -134,11 +143,7 @@ $deleteArticle = function(Article $article) {
     $this->dispatch('article-deleted');
 };
 
-// Check if user needs category setup on page load
-$user = auth()->user();
-if ($user && !$user->has_setup_categories) {
-    $showCategorySetup = true;
-}
+
 
 $markMissedDay = function() {
     $this->missedDate = Carbon::today()->format('Y-m-d');
@@ -167,8 +172,89 @@ $markMissedDay = function() {
     $this->dispatch('success', message: 'Today has been marked as a missed reading day!');
 };
 
+// Onboarding functions
+$nextStep = function() {
+    if ($this->onboardingStep < 3) {
+        $this->onboardingStep++;
+    }
+};
+
+$previousStep = function() {
+    if ($this->onboardingStep > 1) {
+        $this->onboardingStep--;
+    }
+};
+
+$skipOnboarding = function() {
+    $user = auth()->user();
+    $user->update([
+        'has_setup_categories' => true,
+        'has_completed_onboarding' => true,
+    ]);
+    
+    $this->showOnboardingModal = false;
+    $this->dispatch('success', message: 'Welcome to Articify! You can set up categories later.');
+};
+
+$completeOnboarding = function() {
+    if (empty($this->onboardingCategories)) {
+        $this->addError('onboardingCategories', 'Please add at least one category.');
+        return;
+    }
+    
+    $user = auth()->user();
+    
+    // Create categories
+    foreach ($this->onboardingCategories as $index => $category) {
+        $user->categories()->create([
+            'name' => $category['name'],
+            'color' => $category['color'],
+            'sort_order' => $index,
+        ]);
+    }
+    
+    // Mark user as completed onboarding
+    $user->update([
+        'has_setup_categories' => true,
+        'has_completed_onboarding' => true,
+    ]);
+    
+    $this->showOnboardingModal = false;
+    $this->dispatch('success', message: 'Welcome to Articify! Your account is now set up.');
+};
+
+$addCategory = function() {
+    $this->validate([
+        'newCategoryName' => ['required', 'string', 'max:255'],
+        'newCategoryColor' => ['required', 'string', 'regex:/^#[0-9A-F]{6}$/i'],
+    ]);
+    
+    // Check if name already exists
+    $existingNames = collect($this->onboardingCategories)->pluck('name')->toArray();
+    if (in_array($this->newCategoryName, $existingNames)) {
+        $this->addError('newCategoryName', 'A category with this name already exists.');
+        return;
+    }
+    
+    $this->onboardingCategories[] = [
+        'name' => $this->newCategoryName,
+        'color' => $this->newCategoryColor,
+    ];
+    
+    $this->reset(['newCategoryName', 'newCategoryColor']);
+    $this->newCategoryColor = '#3B82F6';
+};
+
+$removeCategory = function($index) {
+    unset($this->onboardingCategories[$index]);
+    $this->onboardingCategories = array_values($this->onboardingCategories);
+};
+
+
+
 ?>
 
+<div>
 <div class="min-h-screen">
     <style>
         .grid-cols-53 {
@@ -487,9 +573,34 @@ $markMissedDay = function() {
             @endif
         </div>
     </div>
-</div>
 
-<!-- Category Setup Modal -->
-@if($showCategorySetup)
-    <x-category-setup-modal />
-@endif
+    <!-- Simple Onboarding Modal -->
+    @if($this->needsOnboarding)
+    <div class="fixed inset-0 z-50 overflow-y-auto bg-opacity-75 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <div class="text-center">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                    Welcome to Articify! 🎉
+                </h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                    We're excited to help you track your academic reading progress.
+                </p>
+                <div class="flex justify-center space-x-3">
+                    <flux:button
+                        wire:click="skipOnboarding"
+                        variant="ghost"
+                    >
+                        Skip for now
+                    </flux:button>
+                    <flux:button
+                        wire:click="skipOnboarding"
+                        variant="primary"
+                    >
+                        Get Started
+                    </flux:button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+</div>

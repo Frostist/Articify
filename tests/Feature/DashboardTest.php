@@ -23,7 +23,7 @@ test('onboarding modal appears for new users', function () {
     $response = $this->get(route('dashboard'));
     $response->assertStatus(200);
     $response->assertSee('Welcome to Articify!');
-    $response->assertSee('Step 1 of 3');
+    $response->assertSee('Get Started');
 });
 
 test('onboarding modal does not appear for users who completed onboarding', function () {
@@ -33,5 +33,5 @@ test('onboarding modal does not appear for users who completed onboarding', func
     $response = $this->get(route('dashboard'));
     $response->assertStatus(200);
     $response->assertDontSee('Welcome to Articify!');
-    $response->assertDontSee('Step 1 of 3');
+    $response->assertDontSee('Get Started');
 });
