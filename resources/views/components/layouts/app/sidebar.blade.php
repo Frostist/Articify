@@ -19,16 +19,6 @@
 
             <flux:spacer />
 
-            <flux:navlist variant="outline">
-                <flux:navlist.item icon="book-open-text" href="#" wire:navigate>
-                {{ __('Articles') }}
-                </flux:navlist.item>
-
-                <flux:navlist.item icon="chart-bar" href="#" wire:navigate>
-                {{ __('Progress') }}
-                </flux:navlist.item>
-            </flux:navlist>
-
             <!-- Desktop User Menu -->
             <flux:dropdown class="hidden lg:block" position="bottom" align="start">
                 <flux:profile

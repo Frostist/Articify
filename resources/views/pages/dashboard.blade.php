@@ -27,7 +27,15 @@ $articles = computed(function() {
     return $user->articles()->where('is_missed_day', false)->latest('read_date')->get();
 });
 
-$contributionData = computed(function() {
+$getContributionLevel = function($count) {
+    if ($count === 0) return 0;
+    if ($count === 1) return 1;  // Light green for 1 article
+    if ($count === 2) return 2;  // Medium green for 2 articles
+    if ($count === 3) return 3;  // Dark green for 3 articles
+    return 4;  // Darkest green for 4+ articles
+};
+
+$contributionData = computed(function() use ($getContributionLevel) {
     $user = auth()->user();
     if (!$user) return [];
     
@@ -57,7 +65,7 @@ $contributionData = computed(function() {
         $data[] = [
             'date' => $currentDate->copy(),
             'count' => $count,
-            'level' => $this->getContributionLevel($count),
+            'level' => $getContributionLevel($count),
             'is_missed_day' => $hasMissedDay,
         ];
         
@@ -66,14 +74,6 @@ $contributionData = computed(function() {
     
     return $data;
 });
-
-$getContributionLevel = function($count) {
-    if ($count === 0) return 0;
-    if ($count === 1) return 1;  // Light green for 1 article
-    if ($count === 2) return 2;  // Medium green for 2 articles
-    if ($count === 3) return 3;  // Dark green for 3 articles
-    return 4;  // Darkest green for 4+ articles
-};
 
 $save = function() {
     $this->validate();
@@ -341,7 +341,7 @@ $markMissedDay = function() {
                     </div>
 
                     <!-- Contribution Grid -->
-                    <div class="grid grid-cols-53 gap-1">
+                    <div class="grid grid-cols-53 gap-1 p-2">
                         @foreach($this->contributionData as $index => $day)
                             @php
                                 $bgColor = match($day['level']) {
@@ -354,7 +354,7 @@ $markMissedDay = function() {
                                 $bgColor = $day['is_missed_day'] ? 'bg-red-200 dark:bg-red-800' : $bgColor;
                             @endphp
                             <div 
-                                class="w-3 h-3 rounded-sm {{ $bgColor }} hover:scale-150 transition-all duration-200 ease-in-out cursor-pointer transform hover:z-10 hover:shadow-lg contribution-square"
+                                class="w-3 h-3 rounded-sm {{ $bgColor }} hover:scale-150 transition-all duration-200 ease-in-out cursor-pointer transform hover:z-10 hover:shadow-lg contribution-square relative"
                                 style="animation-delay: {{ $index * 2 }}ms;"
                                 title="{{ $day['date']->format('M j, Y') }}: {{ $day['is_missed_day'] ? 'Missed reading day' : ($day['count'] . ' article' . ($day['count'] !== 1 ? 's' : '') . ' read') }}"
                             ></div>
