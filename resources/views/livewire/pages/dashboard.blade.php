@@ -201,7 +201,7 @@ $markMissedDay = function() {
                     <flux:button 
                         wire:click="toggleForm" 
                         variant="primary"
-                        class="transition-all duration-300 ease-in-out transform hover:scale-105"
+                        class="transition-all duration-300 ease-in-out transform hover:scale-110 hover:shadow-lg"
                         :class="$showForm ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'"
                     >
                         <div class="flex items-center justify-center transition-all duration-300">
@@ -220,7 +220,7 @@ $markMissedDay = function() {
                         wire:click="markMissedDay"
                         variant="primary"
                         icon="x-circle"
-                        class="transition-all duration-300 ease-in-out transform hover:scale-105 bg-red-600 hover:bg-red-700"
+                        class="transition-all duration-300 ease-in-out hover:shadow-lg bg-red-600 hover:bg-red-700"
                     >
                         I did not read today
                     </flux:button>
