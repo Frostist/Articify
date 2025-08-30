@@ -15,18 +15,17 @@
 <meta property="og:url" content="{{ request()->url() }}" />
 <meta property="og:title" content="{{ $title ?? config('app.name') }}" />
 <meta property="og:description" content="{{ $description ?? 'Articify - Your learning journey, organized and tracked.' }}" />
-<meta property="og:image" content="{{ asset('/images/assets/Logo.png') }}" />
+<meta property="og:image" content="{{ url('/images/assets/Logo.png') }}" />
 
 <!-- Twitter -->
 <meta property="twitter:card" content="summary_large_image" />
 <meta property="twitter:url" content="{{ request()->url() }}" />
 <meta property="twitter:title" content="{{ $title ?? config('app.name') }}" />
 <meta property="twitter:description" content="{{ $description ?? 'Articify - Your learning journey, organized and tracked.' }}" />
-<meta property="twitter:image" content="{{ asset('/images/assets/Logo.png') }}" />
+<meta property="twitter:image" content="{{ url('/images/assets/Logo.png') }}" />
 
 <!-- Additional SEO -->
 <meta name="robots" content="index, follow" />
-<meta name="theme-color" content="#3b82f6" />
 
 <link rel="preconnect" href="https://fonts.bunny.net">
 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
