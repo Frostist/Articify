@@ -6,6 +6,7 @@ use function Livewire\Volt\{state, computed};
 state([
     'search' => '',
     'filter' => 'all', // all, read, missed
+    'categoryFilter' => '',
     'sortBy' => 'read_date',
     'sortOrder' => 'desc',
 ]);
@@ -28,10 +29,21 @@ $articles = computed(function() {
         $query->where('is_missed_day', true);
     }
     
+    // Apply category filter
+    if ($this->categoryFilter) {
+        $query->where('category_id', $this->categoryFilter);
+    }
+    
     // Apply sorting
     $query->orderBy($this->sortBy, $this->sortOrder);
     
     return $query->get();
+});
+
+$categories = computed(function() {
+    $user = auth()->user();
+    if (!$user) return collect();
+    return $user->categories()->orderBy('sort_order')->get();
 });
 
 $totalArticles = computed(function() {
@@ -125,6 +137,16 @@ $updateSort = function($field) {
                         <option value="missed">Missed Days</option>
                     </flux:select>
                 </div>
+
+                <!-- Category Filter -->
+                <div class="sm:w-48">
+                    <flux:select wire:model.live="categoryFilter">
+                        <option value="">All Categories</option>
+                        @foreach($this->categories as $category)
+                            <option value="{{ $category->id }}">{{ $category->name }}</option>
+                        @endforeach
+                    </flux:select>
+                </div>
             </div>
         </div>
 
@@ -178,6 +200,9 @@ $updateSort = function($field) {
                                     </div>
                                 </th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Category
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Actions
                                 </th>
                             </tr>
@@ -210,6 +235,19 @@ $updateSort = function($field) {
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                         {{ $article->read_date->format('M j, Y') }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                        @if($article->category)
+                                            <div class="flex items-center">
+                                                <div 
+                                                    class="w-3 h-3 rounded-full mr-2"
+                                                    style="background-color: {{ $article->category->color }}"
+                                                ></div>
+                                                <span>{{ $article->category->name }}</span>
+                                            </div>
+                                        @else
+                                            <span class="text-gray-400 dark:text-gray-500">No category</span>
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <flux:button

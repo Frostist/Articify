@@ -10,8 +10,10 @@ state([
     'publication_date' => '',
     'url' => '',
     'read_date' => '',
+    'category_id' => '',
     'showForm' => false,
     'missedDate' => '',
+    'showCategorySetup' => false,
 ]);
 
 rules([
@@ -83,9 +85,10 @@ $save = function() {
         'publication_date' => $this->publication_date,
         'url' => $this->url,
         'read_date' => $this->read_date,
+        'category_id' => $this->category_id ?: null,
     ]);
     
-    $this->reset(['title', 'publication_date', 'url', 'read_date', 'showForm']);
+    $this->reset(['title', 'publication_date', 'url', 'read_date', 'category_id', 'showForm']);
     $this->dispatch('article-added');
 };
 
@@ -100,6 +103,12 @@ $deleteArticle = function(Article $article) {
     $article->delete();
     $this->dispatch('article-deleted');
 };
+
+// Check if user needs category setup on page load
+$user = auth()->user();
+if ($user && !$user->has_setup_categories) {
+    $showCategorySetup = true;
+}
 
 $markMissedDay = function() {
     $this->missedDate = Carbon::today()->format('Y-m-d');
@@ -276,6 +285,17 @@ $markMissedDay = function() {
                         <flux:description>Link to the article (DOI, journal website, or research repository)</flux:description>
                     </flux:field>
 
+                    <!-- Category -->
+                    <flux:field label="Category">
+                        <flux:select wire:model="category_id">
+                            <option value="">No Category</option>
+                            @foreach(auth()->user()->categories as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                            @endforeach
+                        </flux:select>
+                        <flux:description>Choose a category to organize your article (optional)</flux:description>
+                    </flux:field>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Publication Date -->
                         <flux:field label="Publication Date" required>
@@ -439,3 +459,8 @@ $markMissedDay = function() {
         </div>
     </div>
 </div>
+
+<!-- Category Setup Modal -->
+@if($showCategorySetup)
+    <x-category-setup-modal />
+@endif

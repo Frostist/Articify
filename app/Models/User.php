@@ -67,4 +67,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Article::class);
     }
+
+    /**
+     * Get the categories for the user
+     */
+    public function categories(): HasMany
+    {
+        return $this->hasMany(Category::class)->orderBy('sort_order');
+    }
 }

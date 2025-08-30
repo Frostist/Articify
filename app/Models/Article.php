@@ -17,6 +17,7 @@ class Article extends Model
         'url',
         'read_date',
         'is_missed_day',
+        'category_id',
     ];
 
     protected $casts = [
@@ -28,5 +29,10 @@ class Article extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 }
