@@ -24,6 +24,8 @@ class User extends Authenticatable
         'email',
         'password',
         'multiple_categories_color',
+        'has_setup_categories',
+        'has_completed_onboarding',
     ];
 
     /**

@@ -20,7 +20,9 @@ return new class extends Migration
             $table->rememberToken();
             $table->timestamps();
             $table->boolean('has_setup_categories')->default(false);
+            $table->boolean('has_completed_onboarding')->default(false);
             $table->string('multiple_categories_color', 7)->default('#F59E0B');
+            
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

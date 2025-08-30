@@ -17,7 +17,7 @@ test('authenticated user can access dashboard', function () {
     $response = $this->actingAs($user)->get('/dashboard');
 
     $response->assertSuccessful();
-    $response->assertSee('Article Reading Tracker');
+    $response->assertSee('Articify Dashboard');
 });
 
 test('contribution graph shows correct data', function () {
