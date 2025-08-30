@@ -9,10 +9,12 @@ new class extends Component {
     public string $name = '';
     public string $color = '#3B82F6';
     public int $sortOrder = 0;
+    public string $multipleCategoriesColor = '#F59E0B';
 
     public function mount(): void
     {
         $this->sortOrder = auth()->user()->categories()->count();
+        $this->multipleCategoriesColor = auth()->user()->multiple_categories_color ?? '#F59E0B';
     }
 
     public function rules(): array
@@ -21,6 +23,7 @@ new class extends Component {
             'name' => ['required', 'string', 'max:255'],
             'color' => ['required', 'string', 'regex:/^#[0-9A-F]{6}$/i'],
             'sortOrder' => ['required', 'integer', 'min:0'],
+            'multipleCategoriesColor' => ['required', 'string', 'regex:/^#[0-9A-F]{6}$/i'],
         ];
     }
 
@@ -109,6 +112,19 @@ new class extends Component {
         $this->name = '';
         $this->color = '#3B82F6';
         $this->sortOrder = $this->categories->count();
+    }
+
+    public function saveMultipleCategoriesColor(): void
+    {
+        $this->validate([
+            'multipleCategoriesColor' => ['required', 'string', 'regex:/^#[0-9A-F]{6}$/i'],
+        ]);
+        
+        auth()->user()->update([
+            'multiple_categories_color' => $this->multipleCategoriesColor,
+        ]);
+        
+        $this->dispatch('multiple-categories-color-updated');
     }
 }; ?>
 
@@ -293,6 +309,58 @@ new class extends Component {
                 </div>
             </div>
         @endif
+            </div>
+
+            <!-- Multiple Categories Color Setting -->
+            <div class="mt-8 bg-white dark:bg-zinc-800 rounded-lg shadow border border-gray-200 dark:border-zinc-700 p-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                    Multiple Categories Color Cube
+                </h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                    Choose the color that will be displayed on the contribution graph when multiple articles with different categories are read on the same day.
+                </p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <flux:field label="Multiple Categories Color" error="{{ $errors->first('multipleCategoriesColor') }}">
+                            <div class="flex items-center space-x-2">
+                                <input
+                                    type="color"
+                                    wire:model="multipleCategoriesColor"
+                                    class="w-12 h-10 rounded border border-gray-300 dark:border-zinc-600 cursor-pointer"
+                                >
+                                <flux:input
+                                    wire:model="multipleCategoriesColor"
+                                    placeholder="#F59E0B"
+                                    class="flex-1"
+                                />
+                            </div>
+                        </flux:field>
+                    </div>
+                    
+                    <div>
+                        <flux:field label="Preview">
+                            <div class="flex items-center space-x-2 p-3 rounded border border-gray-200 dark:border-zinc-700">
+                                <div 
+                                    class="w-4 h-4 rounded-sm"
+                                    style="background-color: {{ $multipleCategoriesColor }}"
+                                ></div>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">
+                                    Multiple Categories Day
+                                </span>
+                            </div>
+                        </flux:field>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <flux:button
+                        wire:click="saveMultipleCategoriesColor"
+                        variant="primary"
+                    >
+                        Save Multiple Categories Color
+                    </flux:button>
+                </div>
             </div>
         </div>
     </x-settings.layout>

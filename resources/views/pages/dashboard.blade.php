@@ -29,15 +29,46 @@ $articles = computed(function() {
     return $user->articles()->where('is_missed_day', false)->latest('read_date')->get();
 });
 
-$getContributionLevel = function($count) {
-    if ($count === 0) return 0;
-    if ($count === 1) return 1;  // Light green for 1 article
-    if ($count === 2) return 2;  // Medium green for 2 articles
-    if ($count === 3) return 3;  // Dark green for 3 articles
-    return 4;  // Darkest green for 4+ articles
+$getContributionColor = function($articles, $user) {
+    if ($articles->isEmpty()) {
+        return null; // No color for no articles
+    }
+    
+    // Check if any articles are missed days
+    if ($articles->contains('is_missed_day', true)) {
+        return '#EF4444'; // Red for missed days
+    }
+    
+    // Get regular articles (not missed days)
+    $regularArticles = $articles->where('is_missed_day', false);
+    
+    if ($regularArticles->isEmpty()) {
+        return null;
+    }
+    
+    // Get unique categories for the day
+    $categories = $regularArticles->pluck('category_id')->filter()->unique();
+    
+    if ($categories->isEmpty()) {
+        // No categories - use green gradient based on count
+        $count = $regularArticles->count();
+        if ($count === 1) return '#10B981'; // Light green
+        if ($count === 2) return '#059669'; // Medium green
+        if ($count === 3) return '#047857'; // Dark green
+        return '#065F46'; // Darkest green
+    }
+    
+    if ($categories->count() === 1) {
+        // Single category - use that category's color
+        $category = $user->categories()->find($categories->first());
+        return $category ? $category->color : '#10B981';
+    }
+    
+    // Multiple categories - use the multiple categories color
+    return $user->multiple_categories_color ?? '#F59E0B';
 };
 
-$contributionData = computed(function() use ($getContributionLevel) {
+$contributionData = computed(function() use ($getContributionColor) {
     $user = auth()->user();
     if (!$user) return [];
     
@@ -59,15 +90,14 @@ $contributionData = computed(function() use ($getContributionLevel) {
         $dateKey = $currentDate->format('Y-m-d');
         $dayArticles = $articles->get($dateKey, collect());
         
-        // Check if any articles for this day are missed days
+        $color = $getContributionColor($dayArticles, $user);
+        $count = $dayArticles->where('is_missed_day', false)->count();
         $hasMissedDay = $dayArticles->contains('is_missed_day', true);
-        $regularArticles = $dayArticles->where('is_missed_day', false);
-        $count = $regularArticles->count();
         
         $data[] = [
             'date' => $currentDate->copy(),
             'count' => $count,
-            'level' => $getContributionLevel($count),
+            'color' => $color,
             'is_missed_day' => $hasMissedDay,
         ];
         
@@ -190,10 +220,10 @@ $markMissedDay = function() {
         <!-- Header -->
         <div class="mb-8">
             <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-                Article Reading Tracker
+                Articify Dashboard
             </h1>
             <p class="mt-2 text-gray-600 dark:text-gray-400">
-                Track your daily academic reading progress with a activity graph
+                Track your daily academic reading progress with an activity graph
             </p>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">
                 Add articles you've read to build your reading history and see your progress over time
@@ -338,7 +368,7 @@ $markMissedDay = function() {
                 Reading Activity
             </h2>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Your reading activity over the past year. Each square represents a day, with darker green indicating more articles read.
+                Your reading activity over the past year. Each square represents a day. Green squares indicate articles without categories, colored squares show category colors, and red squares indicate missed reading days.
             </p>
             
             <div class="overflow-x-auto">
@@ -364,36 +394,35 @@ $markMissedDay = function() {
                     <div class="grid grid-cols-53 gap-1 p-2">
                         @foreach($this->contributionData as $index => $day)
                             @php
-                                $bgColor = match($day['level']) {
-                                    0 => 'bg-gray-100 dark:bg-gray-700',
-                                    1 => 'bg-green-200 dark:bg-green-800',
-                                    2 => 'bg-green-400 dark:bg-green-600',
-                                    3 => 'bg-green-600 dark:bg-green-400',
-                                    4 => 'bg-green-800 dark:bg-green-200',
-                                };
-                                $bgColor = $day['is_missed_day'] ? 'bg-red-200 dark:bg-red-800' : $bgColor;
+                                $bgColor = $day['color'] ? '' : 'bg-gray-100 dark:bg-gray-700';
+                                $customStyle = $day['color'] ? "background-color: {$day['color']};" : '';
                             @endphp
                             <div 
                                 class="w-3 h-3 rounded-sm {{ $bgColor }} hover:scale-150 transition-all duration-200 ease-in-out cursor-pointer transform hover:z-10 hover:shadow-lg contribution-square relative"
-                                style="animation-delay: {{ $index * 2 }}ms;"
+                                style="animation-delay: {{ $index * 2 }}ms; {{ $customStyle }}"
                                 title="{{ $day['date']->format('M j, Y') }}: {{ $day['is_missed_day'] ? 'Missed reading day' : ($day['count'] . ' article' . ($day['count'] !== 1 ? 's' : '') . ' read') }}"
                             ></div>
                         @endforeach
                     </div>
 
                     <!-- Legend -->
-                    <div class="flex items-center justify-end mt-4 space-x-2">
-                        <span class="text-xs text-gray-500 dark:text-gray-400">Less</span>
-                        <div class="flex space-x-1">
+                    <div class="flex items-center justify-end mt-4 space-x-4">
+                        <div class="flex items-center space-x-2">
                             <div class="w-3 h-3 bg-gray-100 dark:bg-gray-700 rounded-sm"></div>
-                            <div class="w-3 h-3 bg-green-200 dark:bg-green-800 rounded-sm"></div>
-                            <div class="w-3 h-3 bg-green-400 dark:bg-green-600 rounded-sm"></div>
-                            <div class="w-3 h-3 bg-green-600 dark:bg-green-400 rounded-sm"></div>
-                            <div class="w-3 h-3 bg-green-800 dark:bg-green-200 rounded-sm"></div>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">No activity</span>
                         </div>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">More</span>
-                        <div class="w-3 h-3 bg-red-600 dark:bg-red-400 rounded-sm"></div>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">Missed</span>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-sm" style="background-color: #10B981;"></div>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">No category</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-sm" style="background-color: #F59E0B;"></div>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">Multiple categories</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 bg-red-600 dark:bg-red-400 rounded-sm"></div>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">Missed day</span>
+                        </div>
                     </div>
                 </div>
             </div>

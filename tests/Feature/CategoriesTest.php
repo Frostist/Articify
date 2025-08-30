@@ -8,31 +8,26 @@ use App\Models\User;
 
 test('users can create categories', function () {
     $user = User::factory()->create();
+    $this->actingAs($user);
 
-    $response = $this->actingAs($user)->get(route('settings.categories'));
+    $response = $this->get(route('settings.categories'));
     $response->assertStatus(200);
     $response->assertSee('Categories');
 });
 
 test('categories page shows empty state when no categories', function () {
     $user = User::factory()->create();
+    $this->actingAs($user);
 
-    $response = $this->actingAs($user)->get(route('settings.categories'));
+    $response = $this->get(route('settings.categories'));
     $response->assertStatus(200);
     $response->assertSee('No categories yet');
 });
 
 test('categories are displayed in articles table', function () {
     $user = User::factory()->create();
-    $category = Category::factory()->create([
-        'user_id' => $user->id,
-        'name' => 'Test Category',
-        'color' => '#FF0000',
-    ]);
-    $article = Article::factory()->create([
-        'user_id' => $user->id,
-        'category_id' => $category->id,
-    ]);
+    $category = Category::factory()->create(['user_id' => $user->id, 'name' => 'Test Category']);
+    Article::factory()->create(['user_id' => $user->id, 'category_id' => $category->id]);
 
     $response = $this->actingAs($user)->get(route('articles'));
     $response->assertStatus(200);
@@ -63,4 +58,14 @@ test('dashboard shows category selection in article form', function () {
     $response = $this->actingAs($user)->get(route('dashboard'));
     $response->assertStatus(200);
     $response->assertSee('Test Category');
+});
+
+test('users can set multiple categories color', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $response = $this->get(route('settings.categories'));
+    $response->assertStatus(200);
+    $response->assertSee('Multiple Categories Color Cube');
+    $response->assertSee('#F59E0B'); // Default orange color
 });

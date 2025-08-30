@@ -23,6 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'multiple_categories_color',
     ];
 
     /**
