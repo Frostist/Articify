@@ -9,7 +9,7 @@ use Illuminate\Database\Seeder;
 class ArticleSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * Run the database seeds. With: php artisan db:seed --class=ArticleSeeder
      */
     public function run(): void
     {
