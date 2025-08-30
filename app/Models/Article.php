@@ -16,11 +16,13 @@ class Article extends Model
         'publication_date',
         'url',
         'read_date',
+        'is_missed_day',
     ];
 
     protected $casts = [
         'publication_date' => 'date',
         'read_date' => 'date',
+        'is_missed_day' => 'boolean',
     ];
 
     public function user(): BelongsTo

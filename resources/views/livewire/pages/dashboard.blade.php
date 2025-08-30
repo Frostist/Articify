@@ -11,6 +11,7 @@ state([
     'url' => '',
     'read_date' => '',
     'showForm' => false,
+    'missedDate' => '',
 ]);
 
 rules([
@@ -23,7 +24,7 @@ rules([
 $articles = computed(function() {
     $user = auth()->user();
     if (!$user) return collect();
-    return $user->articles()->latest('read_date')->get();
+    return $user->articles()->where('is_missed_day', false)->latest('read_date')->get();
 });
 
 $contributionData = computed(function() {
@@ -46,12 +47,18 @@ $contributionData = computed(function() {
     
     while ($currentDate <= $endDate) {
         $dateKey = $currentDate->format('Y-m-d');
-        $count = $articles->get($dateKey, collect())->count();
+        $dayArticles = $articles->get($dateKey, collect());
+        
+        // Check if any articles for this day are missed days
+        $hasMissedDay = $dayArticles->contains('is_missed_day', true);
+        $regularArticles = $dayArticles->where('is_missed_day', false);
+        $count = $regularArticles->count();
         
         $data[] = [
             'date' => $currentDate->copy(),
             'count' => $count,
             'level' => $this->getContributionLevel($count),
+            'is_missed_day' => $hasMissedDay,
         ];
         
         $currentDate->addDay();
@@ -92,6 +99,33 @@ $toggleForm = function() {
 $deleteArticle = function(Article $article) {
     $article->delete();
     $this->dispatch('article-deleted');
+};
+
+$markMissedDay = function() {
+    $this->missedDate = Carbon::today()->format('Y-m-d');
+    
+    $this->validate([
+        'missedDate' => ['required', 'date', 'before_or_equal:today'],
+    ]);
+    
+    // Check if a missed day entry already exists for today
+    if (auth()->user()->articles()->where('read_date', $this->missedDate)->where('is_missed_day', true)->exists()) {
+        $this->dispatch('error', message: 'You have already marked today as a missed reading day.');
+        return;
+    }
+
+    // Create a special "missed day" article entry
+    auth()->user()->articles()->create([
+        'title' => 'Missed Reading Day',
+        'publication_date' => $this->missedDate,
+        'url' => '#',
+        'read_date' => $this->missedDate,
+        'is_missed_day' => true,
+    ]);
+    
+    $this->reset(['missedDate']);
+    $this->dispatch('missed-day-marked');
+    $this->dispatch('success', message: 'Today has been marked as a missed reading day!');
 };
 
 ?>
@@ -159,23 +193,45 @@ $deleteArticle = function(Article $article) {
 
         <!-- Add Article Button -->
         <div class="mb-6">
-            <flux:button 
-                wire:click="toggleForm" 
-                variant="primary"
-                class="mb-4 transition-all duration-300 ease-in-out transform hover:scale-105"
-                :class="$showForm ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'"
+            <div 
+                class="transition-all duration-300 ease-in-out"
+                :class="$showForm ? 'bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800' : ''"
             >
-                <div class="flex items-center justify-center transition-all duration-300">
-                    <flux:icon 
-                        :name="$showForm ? 'x-mark' : 'plus'" 
-                        class="w-4 h-4 mr-2 transition-all duration-300 transform"
-                        :class="$showForm ? 'rotate-90' : 'rotate-0'"
-                    />
-                    <span class="transition-all duration-300">
-                        {{ $showForm ? 'Cancel' : 'Add Article' }}
-                    </span>
+                <div class="flex flex-col sm:flex-row gap-3 items-center">
+                    <flux:button 
+                        wire:click="toggleForm" 
+                        variant="primary"
+                        class="transition-all duration-300 ease-in-out transform hover:scale-105"
+                        :class="$showForm ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'"
+                    >
+                        <div class="flex items-center justify-center transition-all duration-300">
+                            <flux:icon 
+                                :name="$showForm ? 'x-mark' : 'plus'" 
+                                class="w-4 h-4 mr-2 transition-all duration-300 transform"
+                                :class="$showForm ? 'rotate-90' : 'rotate-0'"
+                            />
+                            <span class="transition-all duration-300">
+                                {{ $showForm ? 'Close Form' : 'Add Article' }}
+                            </span>
+                        </div>
+                    </flux:button>
+                    
+                    <flux:button 
+                        wire:click="markMissedDay"
+                        variant="primary"
+                        icon="x-circle"
+                        class="transition-all duration-300 ease-in-out transform hover:scale-105 bg-red-600 hover:bg-red-700"
+                    >
+                        I did not read today
+                    </flux:button>
                 </div>
-            </flux:button>
+                
+                @if($showForm)
+                    <p class="text-sm text-blue-600 dark:text-blue-400 mt-2 text-center">
+                        Fill out the form below to add your article
+                    </p>
+                @endif
+            </div>
         </div>
 
         <!-- Add Article Form -->
@@ -242,20 +298,12 @@ $deleteArticle = function(Article $article) {
                         </flux:field>
                     </div>
 
-                    <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <flux:button 
-                            type="button" 
-                            wire:click="toggleForm" 
-                            variant="ghost"
-                            class="transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        >
-                            Cancel
-                        </flux:button>
+                    <div class="flex justify-center pt-4 border-t border-gray-200 dark:border-gray-700">
                         <flux:button 
                             type="submit" 
                             variant="primary" 
                             icon="plus"
-                            class="transition-all duration-200 hover:scale-105"
+                            class="transition-all duration-200 hover:scale-105 px-8"
                         >
                             Add Article
                         </flux:button>
@@ -303,11 +351,12 @@ $deleteArticle = function(Article $article) {
                                     3 => 'bg-green-600 dark:bg-green-400',
                                     4 => 'bg-green-800 dark:bg-green-200',
                                 };
+                                $bgColor = $day['is_missed_day'] ? 'bg-red-200 dark:bg-red-800' : $bgColor;
                             @endphp
                             <div 
                                 class="w-3 h-3 rounded-sm {{ $bgColor }} hover:scale-150 transition-all duration-200 ease-in-out cursor-pointer transform hover:z-10 hover:shadow-lg contribution-square"
                                 style="animation-delay: {{ $index * 2 }}ms;"
-                                title="{{ $day['date']->format('M j, Y') }}: {{ $day['count'] }} article{{ $day['count'] !== 1 ? 's' : '' }} read"
+                                title="{{ $day['date']->format('M j, Y') }}: {{ $day['is_missed_day'] ? 'Missed reading day' : ($day['count'] . ' article' . ($day['count'] !== 1 ? 's' : '') . ' read') }}"
                             ></div>
                         @endforeach
                     </div>
@@ -323,6 +372,8 @@ $deleteArticle = function(Article $article) {
                             <div class="w-3 h-3 bg-green-800 dark:bg-green-200 rounded-sm"></div>
                         </div>
                         <span class="text-xs text-gray-500 dark:text-gray-400">More</span>
+                        <div class="w-3 h-3 bg-red-600 dark:bg-red-400 rounded-sm"></div>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Missed</span>
                     </div>
                 </div>
             </div>
