@@ -101,6 +101,46 @@ $deleteArticle = function(Article $article) {
         .grid-cols-53 {
             grid-template-columns: repeat(53, 1fr);
         }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+        
+        .animate-fade-in-scale {
+            animation: fadeInScale 0.4s ease-out forwards;
+        }
+        
+        .contribution-square {
+            animation: fadeInScale 0.3s ease-out forwards;
+            opacity: 0;
+        }
+        
+        .article-item {
+            animation: fadeInUp 0.5s ease-out forwards;
+            opacity: 0;
+        }
     </style>
     
     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -110,7 +150,10 @@ $deleteArticle = function(Article $article) {
                 Article Reading Tracker
             </h1>
             <p class="mt-2 text-gray-600 dark:text-gray-400">
-                Track your daily academic reading progress
+                Track your daily academic reading progress with a activity graph
+            </p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">
+                Add articles you've read to build your reading history and see your progress over time
             </p>
         </div>
 
@@ -119,77 +162,116 @@ $deleteArticle = function(Article $article) {
             <flux:button 
                 wire:click="toggleForm" 
                 variant="primary"
-                class="mb-4"
+                class="mb-4 transition-all duration-300 ease-in-out transform hover:scale-105"
+                :class="$showForm ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'"
             >
-                <flux:icon name="plus" class="w-4 h-4 mr-2" />
-                {{ $showForm ? 'Cancel' : 'Add Article' }}
+                <div class="flex items-center justify-center transition-all duration-300">
+                    <flux:icon 
+                        :name="$showForm ? 'x-mark' : 'plus'" 
+                        class="w-4 h-4 mr-2 transition-all duration-300 transform"
+                        :class="$showForm ? 'rotate-90' : 'rotate-0'"
+                    />
+                    <span class="transition-all duration-300">
+                        {{ $showForm ? 'Cancel' : 'Add Article' }}
+                    </span>
+                </div>
             </flux:button>
         </div>
 
         <!-- Add Article Form -->
-        @if($showForm)
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Add New Article
-            </h2>
-            
-            <form wire:submit="save" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div 
+            x-data="{ show: @entangle('showForm') }"
+            x-show="show"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 transform scale-95 -translate-y-4"
+            x-transition:enter-end="opacity-100 transform scale-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 transform scale-100 translate-y-0"
+            x-transition:leave-end="opacity-0 transform scale-95 -translate-y-4"
+            class="mb-8"
+        >
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    Add New Article
+                </h2>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                    Track an academic article you've read. Fill in the details below to add it to your reading log.
+                </p>
+                
+                <form wire:submit="save" class="space-y-6">
+                    <!-- Article Title -->
                     <flux:field label="Article Title" required>
                         <flux:input 
                             wire:model="title" 
-                            placeholder="Enter article title"
+                            placeholder="e.g., 'Machine Learning Applications in Healthcare'"
                             error="{{ $errors->first('title') }}"
                         />
+                        <flux:description>Enter the full title of the academic paper or article</flux:description>
                     </flux:field>
 
-                    <flux:field label="Publication Date" required>
-                        <flux:input 
-                            type="date" 
-                            wire:model="publication_date"
-                            error="{{ $errors->first('publication_date') }}"
-                        />
-                    </flux:field>
-
+                    <!-- Article URL -->
                     <flux:field label="Article URL" required>
                         <flux:input 
                             type="url" 
                             wire:model="url" 
-                            placeholder="https://example.com/article"
+                            placeholder="https://doi.org/10.1000/example or https://example.com/article"
                             error="{{ $errors->first('url') }}"
                         />
+                        <flux:description>Link to the article (DOI, journal website, or research repository)</flux:description>
                     </flux:field>
 
-                    <flux:field label="Date Read" required>
-                        <flux:input 
-                            type="date" 
-                            wire:model="read_date"
-                            error="{{ $errors->first('read_date') }}"
-                        />
-                    </flux:field>
-                </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Publication Date -->
+                        <flux:field label="Publication Date" required>
+                            <flux:input 
+                                type="date" 
+                                wire:model="publication_date"
+                                error="{{ $errors->first('publication_date') }}"
+                            />
+                            <flux:description>When the article was published</flux:description>
+                        </flux:field>
 
-                <div class="flex justify-end space-x-3">
-                    <flux:button 
-                        type="button" 
-                        wire:click="toggleForm" 
-                        variant="ghost"
-                    >
-                        Cancel
-                    </flux:button>
-                    <flux:button type="submit" variant="primary">
-                        Save Article
-                    </flux:button>
-                </div>
-            </form>
+                        <!-- Date Read -->
+                        <flux:field label="Date You Read It" required>
+                            <flux:input 
+                                type="date" 
+                                wire:model="read_date"
+                                error="{{ $errors->first('read_date') }}"
+                            />
+                            <flux:description>When you read this article</flux:description>
+                        </flux:field>
+                    </div>
+
+                    <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <flux:button 
+                            type="button" 
+                            wire:click="toggleForm" 
+                            variant="ghost"
+                            class="transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                            Cancel
+                        </flux:button>
+                        <flux:button 
+                            type="submit" 
+                            variant="primary" 
+                            icon="plus"
+                            class="transition-all duration-200 hover:scale-105"
+                        >
+                            Add Article
+                        </flux:button>
+                    </div>
+                </form>
+            </div>
         </div>
-        @endif
 
         <!-- Contribution Graph -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 Reading Activity
             </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Your reading activity over the past year. Each square represents a day, with darker green indicating more articles read.
+            </p>
             
             <div class="overflow-x-auto">
                 <div class="inline-block min-w-full">
@@ -212,7 +294,7 @@ $deleteArticle = function(Article $article) {
 
                     <!-- Contribution Grid -->
                     <div class="grid grid-cols-53 gap-1">
-                        @foreach($this->contributionData as $day)
+                        @foreach($this->contributionData as $index => $day)
                             @php
                                 $bgColor = match($day['level']) {
                                     0 => 'bg-gray-100 dark:bg-gray-700',
@@ -223,7 +305,8 @@ $deleteArticle = function(Article $article) {
                                 };
                             @endphp
                             <div 
-                                class="w-3 h-3 rounded-sm {{ $bgColor }} hover:scale-125 transition-transform cursor-pointer"
+                                class="w-3 h-3 rounded-sm {{ $bgColor }} hover:scale-150 transition-all duration-200 ease-in-out cursor-pointer transform hover:z-10 hover:shadow-lg contribution-square"
+                                style="animation-delay: {{ $index * 2 }}ms;"
                                 title="{{ $day['date']->format('M j, Y') }}: {{ $day['count'] }} article{{ $day['count'] !== 1 ? 's' : '' }} read"
                             ></div>
                         @endforeach
@@ -253,8 +336,11 @@ $deleteArticle = function(Article $article) {
             
             @if($this->articles->count() > 0)
                 <div class="space-y-4">
-                    @foreach($this->articles->take(10) as $article)
-                        <div class="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                    @foreach($this->articles->take(10) as $index => $article)
+                        <div 
+                            class="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.02] hover:shadow-md article-item"
+                            style="animation-delay: {{ $index * 100 }}ms;"
+                        >
                             <div class="flex-1">
                                 <h3 class="font-medium text-gray-900 dark:text-white">
                                     {{ $article->title }}
@@ -265,7 +351,7 @@ $deleteArticle = function(Article $article) {
                                     <a 
                                         href="{{ $article->url }}" 
                                         target="_blank" 
-                                        class="text-blue-600 dark:text-blue-400 hover:underline"
+                                        class="text-blue-600 dark:text-blue-400 hover:underline transition-colors duration-200"
                                     >
                                         View Article
                                     </a>
@@ -275,9 +361,10 @@ $deleteArticle = function(Article $article) {
                                 wire:click="deleteArticle({{ $article->id }})" 
                                 variant="danger" 
                                 size="sm"
+                                icon="trash"
                                 wire:confirm="Are you sure you want to delete this article?"
+                                class="transition-all duration-200 hover:scale-110"
                             >
-                                <flux:icon name="trash" class="w-4 h-4" />
                             </flux:button>
                         </div>
                     @endforeach
