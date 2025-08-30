@@ -1,61 +1,48 @@
 <?php
 
-namespace Tests\Feature\Auth;
-
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt as LivewireVolt;
-use Tests\TestCase;
 
-class AuthenticationTest extends TestCase
-{
-    use RefreshDatabase;
+test('login screen can be rendered', function () {
+    $response = $this->get(route('login'));
 
-    public function test_login_screen_can_be_rendered(): void
-    {
-        $response = $this->get(route('login'));
+    $response->assertStatus(200);
+});
 
-        $response->assertStatus(200);
-    }
+test('users can authenticate using the login screen', function () {
+    $user = User::factory()->create();
 
-    public function test_users_can_authenticate_using_the_login_screen(): void
-    {
-        $user = User::factory()->create();
+    $response = LivewireVolt::test('auth.login')
+        ->set('email', $user->email)
+        ->set('password', 'password')
+        ->call('login');
 
-        $response = LivewireVolt::test('auth.login')
-            ->set('email', $user->email)
-            ->set('password', 'password')
-            ->call('login');
+    $response
+        ->assertHasNoErrors()
+        ->assertRedirect(route('dashboard', absolute: false));
 
-        $response
-            ->assertHasNoErrors()
-            ->assertRedirect(route('dashboard', absolute: false));
+    $this->assertAuthenticated();
+});
 
-        $this->assertAuthenticated();
-    }
+test('users can not authenticate with invalid password', function () {
+    $user = User::factory()->create();
 
-    public function test_users_can_not_authenticate_with_invalid_password(): void
-    {
-        $user = User::factory()->create();
+    $response = LivewireVolt::test('auth.login')
+        ->set('email', $user->email)
+        ->set('password', 'wrong-password')
+        ->call('login');
 
-        $response = LivewireVolt::test('auth.login')
-            ->set('email', $user->email)
-            ->set('password', 'wrong-password')
-            ->call('login');
+    $response->assertHasErrors('email');
 
-        $response->assertHasErrors('email');
+    $this->assertGuest();
+});
 
-        $this->assertGuest();
-    }
+test('users can logout', function () {
+    $user = User::factory()->create();
 
-    public function test_users_can_logout(): void
-    {
-        $user = User::factory()->create();
+    $response = $this->actingAs($user)->post(route('logout'));
 
-        $response = $this->actingAs($user)->post(route('logout'));
+    $response->assertRedirect(route('home'));
 
-        $response->assertRedirect(route('home'));
-
-        $this->assertGuest();
-    }
-}
+    $this->assertGuest();
+});
