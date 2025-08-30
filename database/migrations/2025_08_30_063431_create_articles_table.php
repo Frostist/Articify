@@ -18,6 +18,7 @@ return new class extends Migration
             $table->date('publication_date');
             $table->string('url', 2048);
             $table->date('read_date');
+            $table->boolean('is_missed_day')->default(false);
             $table->timestamps();
 
             $table->index(['user_id', 'read_date']);
