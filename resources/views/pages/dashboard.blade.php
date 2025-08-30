@@ -174,7 +174,7 @@ $markMissedDay = function() {
 
 // Onboarding functions
 $nextStep = function() {
-    if ($this->onboardingStep < 3) {
+    if ($this->onboardingStep < 2) {
         $this->onboardingStep++;
     }
 };
@@ -197,21 +197,7 @@ $skipOnboarding = function() {
 };
 
 $completeOnboarding = function() {
-    if (empty($this->onboardingCategories)) {
-        $this->addError('onboardingCategories', 'Please add at least one category.');
-        return;
-    }
-    
     $user = auth()->user();
-    
-    // Create categories
-    foreach ($this->onboardingCategories as $index => $category) {
-        $user->categories()->create([
-            'name' => $category['name'],
-            'color' => $category['color'],
-            'sort_order' => $index,
-        ]);
-    }
     
     // Mark user as completed onboarding
     $user->update([
@@ -574,10 +560,12 @@ $removeCategory = function($index) {
         </div>
     </div>
 
-    <!-- Simple Onboarding Modal -->
+    <!-- Multi-Step Onboarding Modal -->
     @if($this->needsOnboarding)
     <div class="fixed inset-0 z-50 overflow-y-auto bg-opacity-75 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full p-6">
+        <div class="bg-white dark:bg-zinc-700 rounded-lg shadow-xl max-w-2xl w-full p-6">
+            <!-- Step 0: Welcome -->
+            @if($onboardingStep == 1)
             <div class="text-center">
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
                     Welcome to Articify! 🎉
@@ -593,13 +581,46 @@ $removeCategory = function($index) {
                         Skip for now
                     </flux:button>
                     <flux:button
-                        wire:click="skipOnboarding"
+                        wire:click="nextStep"
                         variant="primary"
                     >
                         Get Started
                     </flux:button>
                 </div>
             </div>
+            @endif
+
+            <!-- Step 1: Categories Setup -->
+            @if($onboardingStep == 2)
+            <div class="text-center">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                    Organize Your Articles with Categories
+                </h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                    Create custom categories to organize your academic articles. You can categorize by subject, research area, or any system that works for you. This helps you track your reading progress and find articles quickly.
+                </p>
+                <div class="mb-6">
+                    <img src="/images/Step_1.png" alt="Categories Setup" class="mx-auto max-w-md h-auto rounded-lg shadow-md border-2 border-gray-200 dark:border-gray-600">
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-6">
+                    Navigate to Settings → Categories to create your first category
+                </p>
+                <div class="flex justify-center space-x-3">
+                    <flux:button
+                        wire:click="previousStep"
+                        variant="ghost"
+                    >
+                        Back
+                    </flux:button>
+                    <flux:button
+                        wire:click="completeOnboarding"
+                        variant="primary"
+                    >
+                        Continue
+                    </flux:button>
+                </div>
+            </div>
+            @endif
         </div>
     </div>
     @endif
