@@ -69,10 +69,10 @@ $contributionData = computed(function() {
 
 $getContributionLevel = function($count) {
     if ($count === 0) return 0;
-    if ($count === 1) return 1;
-    if ($count <= 3) return 2;
-    if ($count <= 5) return 3;
-    return 4;
+    if ($count === 1) return 1;  // Light green for 1 article
+    if ($count === 2) return 2;  // Medium green for 2 articles
+    if ($count === 3) return 3;  // Dark green for 3 articles
+    return 4;  // Darkest green for 4+ articles
 };
 
 $save = function() {
