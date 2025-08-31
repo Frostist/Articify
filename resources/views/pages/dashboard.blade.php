@@ -18,6 +18,7 @@ state([
     'onboardingCategories' => [],
     'newCategoryName' => '',
     'newCategoryColor' => '#3B82F6',
+    'selectedYear' => 2025,
 ]);
 
 rules([
@@ -76,10 +77,11 @@ $contributionData = computed(function() use ($getContributionColor) {
     $user = auth()->user();
     if (!$user) return [];
     
-    $startDate = Carbon::now()->subYear()->startOfYear();
-    $endDate = Carbon::now()->endOfYear();
+    // Use the selected year for the date range
+    $startDate = Carbon::create($this->selectedYear, 1, 1)->startOfYear();
+    $endDate = Carbon::create($this->selectedYear, 12, 31)->endOfYear();
     
-    // Get all articles read in the last year
+    // Get all articles read in the selected year
     $articles = $user->articles()
         ->whereBetween('read_date', [$startDate, $endDate])
         ->get()
@@ -243,10 +245,6 @@ $removeCategory = function($index) {
 <div>
 <div class="min-h-screen">
     <style>
-        .grid-cols-53 {
-            grid-template-columns: repeat(53, 1fr);
-        }
-        
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -436,44 +434,67 @@ $removeCategory = function($index) {
 
         <!-- Contribution Graph -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Reading Activity
-            </h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Your reading activity over the past year. Each square represents a day. Green squares indicate articles without categories, colored squares show category colors, and red squares indicate missed reading days.
-            </p>
+            <div class="mb-4">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Reading Activity
+                </h2>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Your reading activity for the selected year. Each square represents a day. Green squares indicate articles without categories, colored squares show category colors, and red squares indicate missed reading days.
+                </p>
+                
+                <!-- Horizontal Year Buttons -->
+                <div class="flex items-center space-x-1 mb-4">
+                    @php
+                        $availableYears = [2024, 2025];
+                    @endphp
+                    @foreach($availableYears as $year)
+                        <button 
+                            wire:click="$set('selectedYear', {{ $year }})"
+                            class="px-3 py-1 text-sm rounded transition-all duration-200 ease-in-out {{ $selectedYear == $year ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600' }}"
+                        >
+                            {{ $year }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
             
             <div class="overflow-x-auto">
                 <div class="inline-block min-w-full">
-                    <!-- Month Labels -->
-                    <div class="flex mb-2">
+                    <!-- Integrated Calendar Grid with Month Labels -->
+                    <div class="flex flex-wrap items-start gap-1 p-2">
                         @php
-                            $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                            $currentYear = now()->year;
+                            $contributionData = $this->contributionData;
+                            $currentMonth = null;
+                            $blockIndex = 0;
                         @endphp
-                        @foreach($months as $index => $month)
+                        
+                        @foreach($contributionData as $index => $day)
                             @php
-                                $monthDate = Carbon::create($currentYear, $index + 1, 1);
-                                $weeksInMonth = $monthDate->daysInMonth > 28 ? 5 : 4;
-                            @endphp
-                            <div class="text-xs text-gray-500 dark:text-gray-400" style="width: {{ $weeksInMonth * 14 }}px;">
-                                {{ $month }}
-                            </div>
-                        @endforeach
-                    </div>
-
-                    <!-- Contribution Grid -->
-                    <div class="grid grid-cols-53 gap-1 p-2">
-                        @foreach($this->contributionData as $index => $day)
-                            @php
+                                $dayMonth = $day['date']->format('M');
+                                $showMonthLabel = ($currentMonth !== $dayMonth);
+                                $currentMonth = $dayMonth;
+                                
                                 $bgColor = $day['color'] ? '' : 'bg-gray-100 dark:bg-gray-700';
                                 $customStyle = $day['color'] ? "background-color: {$day['color']};" : '';
                             @endphp
+                            
+                            @if($showMonthLabel)
+                                <!-- Month Label -->
+                                <div class="flex items-center justify-center text-xs text-gray-500 dark:text-gray-400 font-medium h-3 px-2 whitespace-nowrap">
+                                    {{ $dayMonth }}
+                                </div>
+                            @endif
+                            
+                            <!-- Contribution Block -->
                             <div 
                                 class="w-3 h-3 rounded-sm {{ $bgColor }} hover:scale-150 transition-all duration-200 ease-in-out cursor-pointer transform hover:z-10 hover:shadow-lg contribution-square relative"
-                                style="animation-delay: {{ $index * 2 }}ms; {{ $customStyle }}"
+                                style="animation-delay: {{ $blockIndex * 2 }}ms; {{ $customStyle }}"
                                 title="{{ $day['date']->format('M j, Y') }}: {{ $day['is_missed_day'] ? 'Missed reading day' : ($day['count'] . ' article' . ($day['count'] !== 1 ? 's' : '') . ' read') }}"
                             ></div>
+                            
+                            @php
+                                $blockIndex++;
+                            @endphp
                         @endforeach
                     </div>
 
