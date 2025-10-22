@@ -161,10 +161,6 @@ vendor/bin/pint
 5. Run the test suite
 6. Submit a pull request
 
-## License
-
-This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-
 ## Support
 
 For support, please open an issue on the GitHub repository or contact the development team.
